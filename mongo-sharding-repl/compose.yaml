@@ -1,0 +1,274 @@
+name: mongo-sharding-repl
+services:
+  configSrv:
+    image: arm64v8/mongo:latest
+    platform: linux/arm64/v8
+    container_name: configSrv
+    restart: always
+    ports:
+      - 27017:27017
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.10
+    volumes:
+      - config-data:/data/db
+    command:
+      [
+        "--configsvr",
+        "--replSet",
+        "config_server",
+        "--bind_ip_all",
+        "--port",
+        "27017"
+      ]
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 5s
+      start_period: 10s
+      timeout: 10s
+      retries: 300
+
+  shard1:
+    image: arm64v8/mongo:latest
+    platform: linux/arm64/v8
+    container_name: shard1
+    restart: always
+    ports:
+      - 27018:27018
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.9
+    volumes:
+      - shard1-data:/data/db
+    command:
+      [
+        "--shardsvr",
+        "--replSet",
+        "shard1",
+        "--bind_ip_all",
+        "--port",
+        "27018"
+      ]
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27018/test --quiet
+      interval: 5s
+      start_period: 10s
+      timeout: 10s
+      retries: 300
+
+  shard1-1:
+    image: arm64v8/mongo:latest
+    platform: linux/arm64/v8
+    container_name: shard1-1
+    restart: always
+    ports:
+      - 27118:27118
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.11
+    volumes:
+      - shard1-1-data:/data/db
+    command:
+      [
+        "--shardsvr",
+        "--replSet",
+        "shard1",
+        "--bind_ip_all",
+        "--port",
+        "27118"
+      ]
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27118/test --quiet
+      interval: 5s
+      start_period: 10s
+      timeout: 10s
+      retries: 300
+
+  shard1-2:
+    image: arm64v8/mongo:latest
+    platform: linux/arm64/v8
+    container_name: shard1-2
+    restart: always
+    ports:
+      - 27218:27218
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.12
+    volumes:
+      - shard1-2-data:/data/db
+    command:
+      [
+        "--shardsvr",
+        "--replSet",
+        "shard1",
+        "--bind_ip_all",
+        "--port",
+        "27218"
+      ]
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27218/test --quiet
+      interval: 5s
+      start_period: 10s
+      timeout: 10s
+      retries: 300
+
+  shard2:
+    image: arm64v8/mongo:latest
+    platform: linux/arm64/v8
+    container_name: shard2
+    restart: always
+    ports:
+      - 27019:27019
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.8
+    volumes:
+      - shard2-data:/data/db
+    command:
+      [
+        "--shardsvr",
+        "--replSet",
+        "shard2",
+        "--bind_ip_all",
+        "--port",
+        "27019"
+      ]
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27019/test --quiet
+      interval: 5s
+      start_period: 10s
+      timeout: 10s
+      retries: 300
+
+  shard2-1:
+    image: arm64v8/mongo:latest
+    platform: linux/arm64/v8
+    container_name: shard2-1
+    restart: always
+    ports:
+      - 27119:27119
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.13
+    volumes:
+      - shard2-1-data:/data/db
+    command:
+      [
+        "--shardsvr",
+        "--replSet",
+        "shard2",
+        "--bind_ip_all",
+        "--port",
+        "27119"
+      ]
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27119/test --quiet
+      interval: 5s
+      start_period: 10s
+      timeout: 10s
+      retries: 300
+
+  shard2-2:
+    image: arm64v8/mongo:latest
+    platform: linux/arm64/v8
+    container_name: shard2-2
+    restart: always
+    ports:
+      - 27219:27219
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.14
+    volumes:
+      - shard2-2-data:/data/db
+    command:
+      [
+        "--shardsvr",
+        "--replSet",
+        "shard2",
+        "--bind_ip_all",
+        "--port",
+        "27219"
+      ]
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27219/test --quiet
+      interval: 5s
+      start_period: 10s
+      timeout: 10s
+      retries: 300
+
+  mongos_router:
+    image: arm64v8/mongo:latest
+    platform: linux/arm64/v8
+    container_name: mongos_router
+    restart: always
+    ports:
+      - 27020:27020
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.7
+    command:
+      [
+        "mongos",
+        "--configdb",
+        "config_server/configSrv:27017",
+        "--bind_ip_all",
+        "--port",
+        "27020"
+      ]
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27020/test --quiet
+      interval: 5s
+      start_period: 10s
+      timeout: 10s
+      retries: 300
+
+  init:
+    container_name: init
+    image: arm64v8/mongo:latest
+    platform: linux/arm64/v8
+    volumes:
+     - ./init.sh:/init.sh:ro
+    entrypoint: sh -c "sh /init.sh"
+    depends_on:
+      configSrv:
+        condition: service_healthy
+      shard1:
+        condition: service_healthy
+      shard1-1:
+        condition: service_healthy
+      shard1-2:
+        condition: service_healthy
+      shard2:
+        condition: service_healthy
+
+  pymongo_api:
+    container_name: pymongo_api
+    build: 
+      context: api_app
+      dockerfile: Dockerfile
+    image: kazhem/pymongo_api:1.0.0
+    depends_on:
+      - configSrv
+    ports:
+      - 8080:8080
+    environment:
+      MONGODB_URL: "mongodb://host.docker.internal:27020"
+      MONGODB_DATABASE_NAME: "somedb"
+
+
+networks:
+  app-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 173.17.0.0/16
+
+volumes:
+  config-data:
+  shard1-data:
+  shard1-1-data:
+  shard1-2-data:
+  shard2-data:
+  shard2-1-data:
+  shard2-2-data:
